@@ -50,23 +50,20 @@ __global__ void updateBodiesKernel(vector3 *pos,
                                    vector3 *accels,
                                    int      n)
 {
-    // One block handles ONE body i
+    // one block handles one body i
     int i   = blockIdx.x;
     int tid = threadIdx.x;
 
     if (i >= n) return;
 
-    // Shared memory to hold partial sums of acceleration for body i
     __shared__ double s_ax[BLOCK_SIZE];
     __shared__ double s_ay[BLOCK_SIZE];
     __shared__ double s_az[BLOCK_SIZE];
 
-    // Each thread will accumulate a partial sum over some of the j's
     double ax = 0.0;
     double ay = 0.0;
     double az = 0.0;
 
-    // Walk over j's in chunks: j = tid, tid + BLOCK_SIZE, ...
     for (int j = tid; j < n; j += BLOCK_SIZE) {
         int idx = i * n + j;   // row i, column j in the flattened matrix
 
@@ -75,7 +72,7 @@ __global__ void updateBodiesKernel(vector3 *pos,
         az += accels[idx][2];
     }
 
-    // Store partial sums in shared memory
+    // store partial sums in shared memory
     s_ax[tid] = ax;
     s_ay[tid] = ay;
     s_az[tid] = az;
@@ -92,7 +89,6 @@ __global__ void updateBodiesKernel(vector3 *pos,
         __syncthreads();
     }
 
-    // After reduction, thread 0 has the total acceleration for body i
     if (tid == 0) {
         double ax_total = s_ax[0];
         double ay_total = s_ay[0];
